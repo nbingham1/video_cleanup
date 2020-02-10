@@ -81,11 +81,15 @@ def pickBack(dev, vel, idx, sz):
 	#args = np.argsort(np.array(sz)).tolist()
 	#idset = list(set(idx))
 	#qual = []
-	#for k in idset:
-	#	qual.append(getQual(vel, idx,k))
+	#print sz
+	#print args
+	#for k in reversed(args):
+	#	if len(qual) <= 0 or sz[k] > max(sz)/2:
+	#		qual.append(getQual(vel, idx, idset[k]))
 	#result = np.argmin(np.array(qual))
 	#print sz[result]
 	#return result
+	
 	args = np.argsort(np.array(sz)).tolist()
 	results = []
 	i = 0
@@ -100,13 +104,13 @@ def mask_img(img):
 		for y in range(0, img.shape[0])], dtype=np.uint8)
 
 def fixImg(img):
-	#grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-	#kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
-	#mask = cv2.adaptiveThreshold(grey, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 25, 30)
-	#mask = cv2.dilate(mask, kernel, iterations=1)
-	#mask = cv2.erode(mask, kernel, iterations=1)
-	#mask = cv2.dilate(mask, kernel, iterations=2)
-	#result = cv2.inpaint(img, mask, 1, cv2.INPAINT_TELEA)
+	grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+	kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
+	mask = cv2.adaptiveThreshold(grey, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 25, 30)
+	mask = cv2.dilate(mask, kernel, iterations=1)
+	mask = cv2.erode(mask, kernel, iterations=1)
+	mask = cv2.dilate(mask, kernel, iterations=2)
+	result = cv2.inpaint(img, mask, 1, cv2.INPAINT_TELEA)
 	#cv2.imshow("img", result)
 	#cv2.waitKey()
 	return img
@@ -115,28 +119,28 @@ def featureMask(img):
 	ekernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
 	skernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
 	grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
 	grey2 = cv2.erode(grey, ekernel, iterations=5)
 	grey2 = cv2.GaussianBlur(grey2, (11,11), 0)
 	grey2 = cv2.dilate(grey2, ekernel, iterations=5)
+	grey2 = cv2.pyrDown(grey2)
+	grey2 = cv2.pyrDown(grey2)
+	mask = cv2.adaptiveThreshold(grey2, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 3, 8)
+	mask = cv2.dilate(mask, ekernel, iterations=1)
 
 	grey = cv2.dilate(grey, ekernel, iterations=5)
 	grey = cv2.GaussianBlur(grey, (11,11), 0)
 	grey = cv2.erode(grey, ekernel, iterations=5)
-
-	grey2 = cv2.pyrDown(grey2)
-	grey2 = cv2.pyrDown(grey2)
 	grey = cv2.pyrDown(grey)
 	grey = cv2.pyrDown(grey)
 
-	mask = cv2.adaptiveThreshold(grey2, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 3, 8)
-	mask = cv2.dilate(mask, ekernel, iterations=1)
 	grey = cv2.inpaint(grey, mask, 1, cv2.INPAINT_TELEA)
 	
 	#grey = cv2.filter2D(grey, -1, skernel)
 	#cv2.imshow("img", mask)
 	#cv2.waitKey()
-	cv2.imshow("img", grey)
-	cv2.waitKey()
+	#cv2.imshow("img", grey)
+	#cv2.waitKey()
 	return grey
 
 if len(sys.argv) > 1: 
@@ -172,6 +176,7 @@ if len(sys.argv) > 1:
 			tmp = np.array([pos1[k] for k, stat in enumerate(status) if stat[0] == 1])
 			pos1 = tmp
 
+			print pos0
 			if len(pos0) > 1:
 				vel = getVel(pos0, pos1)
 
@@ -181,10 +186,18 @@ if len(sys.argv) > 1:
 				hier = sch.linkage(dist, method='complete')
 				#print dist.min()
 				#print dist.max()
+				#spacing = 0.001
 				idx = sch.fcluster(hier, dist.min() + (dist.max() - dist.min())*0.01+0.001, 'distance')
+				idset = list(set(idx))
+				#while max([sum(idx==k) for k in idset]) < len(idx)/3 and spacing < 1000:
+				#	print spacing
+				#	print max([sum(idx==k) for k in idset])
+				#	print [sum(idx==k) for k in idset]
+				#	spacing += 0.001
+				#	idx = sch.fcluster(hier, dist.min() + (dist.max() - dist.min())*spacing+0.001, 'distance')
+				#	idset = list(set(idx))
 				#print dist.min() + (dist.max() - dist.min())*0.01+0.001
 				#print idx
-				idset = list(set(idx))
 
 				clusters = [[p[0] for p in pos0[idx == k].tolist()] for k in idset]
 				sz = [len(c) for c in clusters]
